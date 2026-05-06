@@ -1,6 +1,6 @@
 # Cuticle Melanization Analyzer
 
-A desktop GUI tool for quantifying cuticle (skin) melanization in caterpillars from overhead images. Designed for researchers and students — no programming experience required to use.
+A desktop GUI tool for quantifying cuticle (skin) melanization in caterpillars from overhead images. Designed for researchers and students, no programming experience required to use.
 
 ---
 
@@ -49,7 +49,7 @@ You should see something like `Python 3.11.x`. If not, install Python from https
 Navigate to the folder containing the project files, then run:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt 
 ```
 
 > **Windows users:** use `pip` instead of `pip3` if the above doesn't work.  

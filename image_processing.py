@@ -4,7 +4,7 @@ All functions operate on numpy arrays and are GUI-independent.
 """
 
 import cv2
-import numpy as np
+import numpy as np 
 from skimage.morphology import skeletonize
 from scipy.interpolate import splprep, splev
 from collections import deque

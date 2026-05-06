@@ -167,6 +167,4 @@ Cuticle_Melanization/
 
 ## Citation / Acknowledgments
 
-If you use this tool in published research, please acknowledge it in your methods section. Example:
-
-> "Cuticle melanization was quantified using the Cuticle Melanization Analyzer (custom Python software, [your institution/name])."
+If you use this tool in published research, please acknowledge it in your methods section.

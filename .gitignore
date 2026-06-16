@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# OS cruft (macOS / Windows)
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Tool output
+melanization_results/
+*_summary.csv
+*_centerline_profile.csv
+*_heatmap.png
+batch_summary.csv
+average_heatmap.png

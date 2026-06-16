@@ -10,7 +10,10 @@ Requirements:
     pip install -r requirements.txt
 """
 
-import tkinter as tk 
+from __future__ import annotations  # allow "X | None" hints on Python 3.9
+
+import sys
+import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
 from pathlib import Path
@@ -133,10 +136,22 @@ class MelanizationApp:
         inner.bind("<Configure>", _resize)
         canvas.bind("<Configure>", lambda e: canvas.itemconfig(win_id, width=e.width))
 
-        # Mouse-wheel scroll
+        # Mouse-wheel scroll (cross-platform: Windows/macOS use <MouseWheel>
+        # with a signed delta; Linux uses Button-4/Button-5).
         def _scroll(e):
-            canvas.yview_scroll(int(-1 * (e.delta / 120)), "units")
-        canvas.bind_all("<MouseWheel>", _scroll)
+            if e.num == 4:            # Linux scroll up
+                step = -1
+            elif e.num == 5:          # Linux scroll down
+                step = 1
+            elif e.delta:             # Windows (±120 steps) / macOS (small ints)
+                step = -1 if e.delta > 0 else 1
+            else:
+                return
+            canvas.yview_scroll(step, "units")
+
+        canvas.bind_all("<MouseWheel>", _scroll)   # Windows / macOS
+        canvas.bind_all("<Button-4>", _scroll)     # Linux scroll up
+        canvas.bind_all("<Button-5>", _scroll)     # Linux scroll down
 
         inner.columnconfigure(0, weight=1)
         self._build_load_section(inner)
@@ -287,7 +302,7 @@ class MelanizationApp:
         if not path:
             return
         self.folder_path = Path(path)
-        n = sum(1 for f in self.folder_path.iterdir() if f.suffix.lower() in IMAGE_EXTS)
+        n = len(ip.list_images(self.folder_path))
         self.folder_label.config(
             text=f"{self.folder_path.name}/  ({n} images)", foreground="black"
         )
@@ -356,9 +371,7 @@ class MelanizationApp:
             messagebox.showinfo("No Folder", "Select a folder first.")
             return
 
-        paths = sorted(
-            p for p in self.folder_path.iterdir() if p.suffix.lower() in IMAGE_EXTS
-        )
+        paths = ip.list_images(self.folder_path)
         if not paths:
             messagebox.showinfo("No Images", "No supported images found in that folder.")
             return
@@ -421,8 +434,8 @@ class MelanizationApp:
                     for h in heatmaps
                 ]
                 avg = np.mean(resized, axis=0).astype(np.uint8)
-                cv2.imwrite(
-                    str(out / "average_heatmap.png"),
+                ip.imwrite_unicode(
+                    out / "average_heatmap.png",
                     cv2.cvtColor(avg, cv2.COLOR_RGB2BGR),
                 )
 
@@ -558,19 +571,31 @@ class MelanizationApp:
         )
 
 
+def _set_windows_dpi_awareness():
+    """
+    Tell Windows this process is DPI-aware so the UI stays crisp on HiDPI
+    displays. Must run before the first Tk window is created. No-op elsewhere.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(1)   # system DPI aware
+    except Exception:
+        try:
+            windll.user32.SetProcessDPIAware()    # fallback for older Windows
+        except Exception:
+            pass
+
+
 def main():
+    _set_windows_dpi_awareness()
+
     root = tk.Tk()
 
     # Improve DPI rendering on HiDPI/Retina displays
     try:
         root.tk.call("tk", "scaling", 1.4)
-    except Exception:
-        pass
-
-    # Windows: set DPI awareness
-    try:
-        from ctypes import windll
-        windll.shcore.SetProcessDpiAwareness(1)
     except Exception:
         pass
 

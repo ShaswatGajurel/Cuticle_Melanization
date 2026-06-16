@@ -3,6 +3,8 @@ Image processing backend for cuticle melanization analysis.
 All functions operate on numpy arrays and are GUI-independent.
 """
 
+from __future__ import annotations  # allow "X | None" hints on Python 3.9
+
 import cv2
 import numpy as np 
 from skimage.morphology import skeletonize
@@ -18,11 +20,51 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp"}
 
 # ── Loading ───────────────────────────────────────────────────────────────────
 
+def imread_unicode(path) -> np.ndarray | None:
+    """
+    Read an image, tolerating non-ASCII paths.
+
+    cv2.imread() fails silently on Windows when the path contains non-ASCII
+    characters (accented names, non-English user folders). Reading the bytes
+    ourselves and decoding sidesteps OpenCV's narrow-string path handling.
+    """
+    try:
+        data = np.fromfile(str(path), dtype=np.uint8)
+    except OSError:
+        return None
+    if data.size == 0:
+        return None
+    return cv2.imdecode(data, cv2.IMREAD_COLOR)
+
+
+def imwrite_unicode(path, image: np.ndarray) -> bool:
+    """
+    Write an image, tolerating non-ASCII paths (Windows-safe counterpart to
+    cv2.imwrite). Returns True on success.
+    """
+    path = Path(path)
+    ext = path.suffix or ".png"
+    ok, buf = cv2.imencode(ext, image)
+    if not ok:
+        return False
+    buf.tofile(str(path))
+    return True
+
+
 def load_image(path: str) -> np.ndarray:
-    img = cv2.imread(str(path))
+    img = imread_unicode(path)
     if img is None:
         raise ValueError(f"Could not read image: {path}")
     return img
+
+
+def list_images(folder) -> list[Path]:
+    """Return supported image files directly inside a folder, sorted by name."""
+    folder = Path(folder)
+    return sorted(
+        p for p in folder.iterdir()
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+    )
 
 
 def to_grayscale(image: np.ndarray) -> np.ndarray:
@@ -255,8 +297,8 @@ def export_single(
             "mean_intensity": cl_profile,
         }).to_csv(out / f"{stem}_centerline_profile.csv", index=False)
 
-    cv2.imwrite(
-        str(out / f"{stem}_heatmap.png"),
+    imwrite_unicode(
+        out / f"{stem}_heatmap.png",
         cv2.cvtColor(overlay_rgb, cv2.COLOR_RGB2BGR),
     )
     return out
